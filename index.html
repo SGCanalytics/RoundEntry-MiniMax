@@ -1113,8 +1113,11 @@
             const [submitting, setSubmitting] = useState(false);
             const [historyExpanded, setHistoryExpanded] = useState(false);
             
-            const endDistanceRef = useRef(null);
             const startDistanceRef = useRef(null);
+            const endDistanceRef = useRef(null);
+            const endLieRef = useRef(null);
+            const penaltyRef = useRef(null);
+            const recordButtonRef = useRef(null);
 
             const weatherOptions = ['Cold', 'Windy', 'Cold and Windy', 'Normal'];
             const courseOptions = ['Hard', 'Standard', 'Easy'];
@@ -1176,11 +1179,22 @@
                     }
                 } else {
                     // Continue on same hole
+                    const isSecondShot = newHoles[currentHole - 1].shots.length === 2;
+                    const startDistForSecondShot = parseFloat(currentShot.endDistance);
+                    
+                    // Dynamic default: if 2nd shot and start distance < 200, default to Green
+                    let nextEndLie = 'Fairway';
+                    if (currentShot.endLie === 'Green') {
+                        nextEndLie = 'Green';
+                    } else if (isSecondShot && startDistForSecondShot < 200) {
+                        nextEndLie = 'Green';
+                    }
+                    
                     setCurrentShot({
                         startDistance: currentShot.endDistance,
                         startLie: currentShot.endLie,
                         endDistance: '',
-                        endLie: currentShot.endLie === 'Green' ? 'Green' : 'Fairway',
+                        endLie: nextEndLie,
                         penalty: false
                     });
                     setTimeout(() => endDistanceRef.current?.focus(), 50);
@@ -1458,6 +1472,12 @@
                                             value={currentShot.startDistance}
                                             disabled={!isFirstShot}
                                             onChange={(e) => setCurrentShot({...currentShot, startDistance: e.target.value})}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Tab' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    endDistanceRef.current?.focus();
+                                                }
+                                            }}
                                         />
                                         <span className="input-unit">{currentShot.startLie === 'Green' ? 'ft' : 'yd'}</span>
                                     </div>
@@ -1482,13 +1502,26 @@
                                             placeholder="0 = holed"
                                             value={currentShot.endDistance}
                                             onChange={(e) => setCurrentShot({...currentShot, endDistance: e.target.value})}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Tab' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    endLieRef.current?.focus();
+                                                }
+                                            }}
                                         />
                                         <span className="input-unit">{currentShot.endLie === 'Green' ? 'ft' : 'yd'}</span>
                                     </div>
                                     <select 
+                                        ref={endLieRef}
                                         className="form-select" 
                                         value={currentShot.endLie}
                                         onChange={(e) => setCurrentShot({...currentShot, endLie: e.target.value})}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Tab' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                penaltyRef.current?.focus();
+                                            }
+                                        }}
                                     >
                                         {lieTypes.map(l => <option key={l} value={l}>{l}</option>)}
                                     </select>
@@ -1498,16 +1531,23 @@
                             {/* Penalty Toggle */}
                             <label className={`penalty-toggle ${currentShot.penalty ? 'active' : ''}`}>
                                 <input 
+                                    ref={penaltyRef}
                                     type="checkbox" 
                                     className="penalty-checkbox"
                                     checked={currentShot.penalty}
                                     onChange={(e) => setCurrentShot({...currentShot, penalty: e.target.checked})}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Tab' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            recordButtonRef.current?.focus();
+                                        }
+                                    }}
                                 />
                                 <span className="penalty-text">Penalty Stroke (+1)</span>
                             </label>
                             
                             {/* Main Action Button */}
-                            <button className="btn btn-primary" onClick={addShot}>
+                            <button ref={recordButtonRef} className="btn btn-primary" onClick={addShot}>
                                 {parseFloat(currentShot.endDistance) === 0 ? 'Complete Hole' : 'Add Shot'}
                             </button>
                             
