@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Golf Shot Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #fafaf8, #f5f4f0);
+            color: #2c3333;
+            line-height: 1.6;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+        }
+        
+        html {
+            height: -webkit-fill-available;
+        }
+        
+        h1, h2, h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        /* ===== CONTAINER & CARD ===== */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(44, 51, 51, 0.08), 0 2px 8px rgba(44, 51, 51, 0.04);
+            padding: 1.25rem;
+        }
+        
+        /* ===== HEADER STYLES ===== */
+        .header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .header h1 {
+            font-size: 1.75rem;
+            color: #2d5016;
+            margin-bottom: 0.25rem;
+        }
+        
+        .header-compact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e8e6e0;
+            margin-bottom: 1rem;
+        }
+        
+        .header-compact h1 {
+            font-size: 1.5rem;
+            color: #2d5016;
+        }
+        
+        .header-meta {
+            text-align: right;
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .header-meta .score {
+            font-weight: 600;
+            color: #2c3333;
+            font-size: 0.9rem;
+        }
+        
+        /* ===== PREVIOUS SHOT BANNER (Mobile Key Feature) ===== */
+        .prev-shot-banner {
+            background: linear-gradient(135deg, #f0f7ed 0%, #e8f0e5 100%);
+            border: 1px solid #c4ddb8;
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .prev-shot-banner.first-shot {
+            background: linear-gradient(135deg, #fafaf8 0%, #f5f4f0 100%);
+            border-color: #e8e6e0;
+        }
+        
+        .prev-shot-info {
+            font-size: 0.85rem;
+        }
+        
+        .prev-shot-label {
+            font-weight: 600;
+            color: #2d5016;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.125rem;
+        }
+        
+        .prev-shot-detail {
+            color: #2c3333;
+        }
+        
+        .prev-shot-sg {
+            text-align: right;
+        }
+        
+        .prev-shot-sg-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        
+        .prev-shot-sg-value.positive { color: #2d5016; }
+        .prev-shot-sg-value.negative { color: #c77d3a; }
+        
+        /* ===== FORM ELEMENTS ===== */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 0.35rem;
+            letter-spacing: 0.3px;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.75rem 0.875rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 16px; /* Prevents iOS zoom */
+            background: white;
+            border: 1.5px solid #e8e6e0;
+            border-radius: 4px;
+            color: #2c3333;
+            transition: border-color 200ms ease;
+            -webkit-appearance: none;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #3d6b22;
+        }
+        
+        .form-input:disabled {
+            background: #f5f4f0;
+            color: #6b7280;
+        }
+        
+        .form-input::placeholder {
+            color: #9ca3af;
+        }
+        
+        .form-select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            padding-right: 2.5rem;
+        }
+        
+        /* ===== SHOT INPUT GRID (Mobile Optimized) ===== */
+        .shot-input-section {
+            background: #fafaf8;
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .shot-input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .shot-input-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #2d5016;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .input-with-unit {
+            position: relative;
+        }
+        
+        .input-unit {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            color: #9ca3af;
+            pointer-events: none;
+        }
+        
+        .input-with-unit .form-input {
+            padding-right: 2.5rem;
+        }
+        
+        /* ===== PENALTY TOGGLE ===== */
+        .penalty-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: #fff8f0;
+            border: 1.5px solid #e8d4b8;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .penalty-toggle.active {
+            background: #fef3e6;
+            border-color: #c77d3a;
+        }
+        
+        .penalty-checkbox {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: #b8956a;
+            cursor: pointer;
+        }
+        
+        .penalty-text {
+            font-weight: 500;
+            color: #2c3333;
+            font-size: 0.9rem;
+        }
+        
+        /* ===== BUTTONS ===== */
+        .btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 200ms ease;
+            letter-spacing: 0.3px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .btn-primary {
+            background: #2d5016;
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-primary:hover, .btn-primary:active {
+            background: #3d6b22;
+        }
+        
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #b8956a;
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-secondary:hover, .btn-secondary:active {
+            background: #a07d52;
+        }
+        
+        .btn-small {
+            padding: 0.625rem 1rem;
+            font-size: 0.85rem;
+        }
+        
+        .btn-outline {
+            background: white;
+            border: 1.5px solid #e8e6e0;
+            color: #6b7280;
+        }
+        
+        .btn-outline:hover, .btn-outline:active {
+            border-color: #2d5016;
+            color: #2d5016;
+        }
+        
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+        
+        /* ===== SHOT HISTORY (Collapsible on Mobile) ===== */
+        .shot-history {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e8e6e0;
+        }
+        
+        .shot-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.5rem 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .shot-history-header h3 {
+            font-size: 1rem;
+            color: #2d5016;
+        }
+        
+        .shot-history-toggle {
+            font-size: 0.8rem;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .shot-history-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 300ms ease;
+        }
+        
+        .shot-history-content.expanded {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .shot-item {
+            background: #fafaf8;
+            border: 1px solid #e8e6e0;
+            border-radius: 4px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+        
+        .shot-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .shot-label {
+            font-weight: 600;
+            color: #2d5016;
+        }
+        
+        .shot-sg {
+            font-weight: 600;
+        }
+        
+        .shot-sg.positive { color: #2d5016; }
+        .shot-sg.negative { color: #c77d3a; }
+        
+        .penalty-badge {
+            color: #c77d3a;
+            font-weight: 600;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+        
+        .hole-total {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: #fafaf8;
+            border: 1px solid #e8e6e0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        /* ===== ROUND INFO PAGE ===== */
+        .round-info-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .benchmark-info {
+            background: #f0f7ed;
+            border: 1px solid #c4ddb8;
+            border-radius: 4px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #2d5016;
+        }
+        
+        /* ===== COMPLETION PAGE ===== */
+        .success-icon {
+            font-size: 3rem;
+            color: #2d5016;
+            margin-bottom: 1rem;
+        }
+        
+        .success-title {
+            font-size: 1.75rem;
+            color: #2d5016;
+            margin-bottom: 0.5rem;
+        }
+        
+        .success-message {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .summary-card {
+            background: #fafaf8;
+            border: 1px solid #e8e6e0;
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        
+        .summary-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            color: #2d5016;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid #e8e6e0;
+        }
+        
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .summary-label {
+            color: #6b7280;
+        }
+        
+        .summary-value {
+            color: #2c3333;
+            font-weight: 600;
+        }
+        
+        .success-box {
+            background: #f0f7ed;
+            border: 1.5px solid #c4ddb8;
+            border-radius: 4px;
+            padding: 1rem;
+            color: #2d5016;
+            font-weight: 500;
+        }
+        
+        /* ===== DESKTOP ENHANCEMENTS ===== */
+        @media (min-width: 768px) {
+            .container {
+                padding: 2rem 1.5rem;
+                max-width: 700px;
+            }
+            
+            .card {
+                padding: 2rem;
+            }
+            
+            .header h1 {
+                font-size: 2.25rem;
+            }
+            
+            .shot-input-section {
+                padding: 1.5rem;
+            }
+            
+            .round-info-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .round-info-grid .form-group.full-width {
+                grid-column: 1 / -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // ============================================================
+        // CONFIGURATION
+        // ============================================================
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydum82VpgH-ZvxXMiZwtFq1nJiZx5vK2mnQSfI2FIzM1hbComsTE-tWQSt8q800Ifz/exec';
+
+        
+        // ============================================================
+        // BENCHMARK DATA
+        // Sparse format: exact values for 0-120, key interpolation points beyond
+        // Format: distance,tee,fairway,rough,sand,recovery,green
+        // ============================================================
+        const BENCHMARKS = {
+            'PGA Tour': `0,0,0,0,0,0,0
+1,,1.10,1.34,2.32,1.86,1.01
+2,,1.35,1.45,2.33,2.01,1.03
+3,,1.59,1.56,2.34,2.16,1.04
+4,,1.73,1.67,2.35,2.31,1.13
+5,,1.85,1.79,2.36,2.47,1.22
+6,,1.92,1.89,2.37,2.61,1.31
+7,,1.99,1.99,2.39,2.75,1.40
+8,,2.05,2.09,2.40,2.88,1.48
+9,,2.10,2.17,2.41,2.99,1.57
+10,,2.13,2.23,2.42,3.07,1.61
+11,,2.16,2.26,2.43,3.11,1.64
+12,,2.18,2.30,2.45,3.15,1.68
+13,,2.21,2.33,2.46,3.20,1.71
+14,,2.23,2.36,2.47,3.24,1.74
+15,,2.26,2.40,2.48,3.28,1.78
+16,,2.29,2.43,2.49,3.32,1.80
+17,,2.32,2.46,2.50,3.36,1.81
+18,,2.34,2.50,2.51,3.41,1.83
+19,,2.37,2.53,2.52,3.45,1.85
+20,,2.40,2.56,2.53,3.49,1.87
+21,,2.41,2.57,2.54,3.50,1.88
+22,,2.42,2.58,2.56,3.51,1.89
+23,,2.43,2.59,2.57,3.52,1.90
+24,,2.44,2.61,2.59,3.54,1.91
+25,,2.45,2.62,2.60,3.55,1.92
+26,,2.46,2.63,2.62,3.56,1.93
+27,,2.47,2.64,2.63,3.57,1.94
+28,,2.48,2.65,2.65,3.59,1.96
+29,,2.49,2.67,2.66,3.60,1.97
+30,,2.50,2.68,2.68,3.61,1.98
+31,,2.51,2.69,2.69,3.62,1.98
+32,,2.52,2.70,2.70,3.63,1.99
+33,,2.53,2.71,2.72,3.64,2.00
+34,,2.54,2.72,2.73,3.65,2.01
+35,,2.55,2.73,2.75,3.66,2.01
+36,,2.56,2.74,2.76,3.67,2.02
+37,,2.57,2.75,2.78,3.68,2.03
+38,,2.58,2.76,2.79,3.69,2.04
+39,,2.59,2.77,2.81,3.70,2.04
+40,,2.60,2.78,2.82,3.71,2.05
+41,,2.61,2.78,2.84,3.72,2.06
+42,,2.61,2.79,2.85,3.72,2.06
+43,,2.62,2.79,2.87,3.73,2.07
+44,,2.62,2.79,2.89,3.74,2.08
+45,,2.63,2.80,2.90,3.74,2.09
+46,,2.63,2.80,2.92,3.74,2.09
+47,,2.64,2.81,2.94,3.75,2.10
+48,,2.64,2.81,2.95,3.75,2.11
+49,,2.65,2.81,2.97,3.76,2.12
+50,,2.65,2.82,2.99,3.76,2.12
+51,2.66,2.66,2.83,3.00,3.77,2.13
+52,2.66,2.66,2.83,3.02,3.77,2.14
+53,2.67,2.67,2.84,3.03,3.78,2.14
+54,2.67,2.67,2.85,3.05,3.78,2.15
+55,2.68,2.68,2.86,3.07,3.79,2.16
+56,2.68,2.68,2.87,3.08,3.79,2.17
+57,2.69,2.69,2.88,3.10,3.80,2.17
+58,2.69,2.69,2.89,3.12,3.80,2.18
+59,2.70,2.70,2.90,3.13,3.81,2.19
+60,2.70,2.70,2.91,3.15,3.81,2.19
+61,2.70,2.70,2.91,3.15,3.81,2.20
+62,2.71,2.71,2.92,3.16,3.81,2.21
+63,2.71,2.71,2.92,3.16,3.81,2.22
+64,2.71,2.71,2.92,3.17,3.81,2.22
+65,2.71,2.71,2.92,3.17,3.81,2.23
+66,2.72,2.72,2.93,3.18,3.81,2.24
+67,2.72,2.72,2.93,3.18,3.81,2.25
+68,2.72,2.72,2.93,3.19,3.81,2.25
+69,2.72,2.72,2.93,3.19,3.81,2.26
+70,2.73,2.73,2.94,3.20,3.81,2.27
+71,2.73,2.73,2.94,3.20,3.81,2.27
+72,2.73,2.73,2.94,3.20,3.81,2.28
+73,2.73,2.73,2.94,3.21,3.81,2.29
+74,2.74,2.74,2.95,3.21,3.81,2.30
+75,2.74,2.74,2.95,3.22,3.80,2.30
+76,2.74,2.74,2.95,3.22,3.80,2.31
+77,2.74,2.74,2.95,3.23,3.80,2.32
+78,2.75,2.75,2.96,3.23,3.80,2.33
+79,2.75,2.75,2.96,3.24,3.80,2.33
+80,2.75,2.75,2.96,3.24,3.80,2.34
+81,2.75,2.75,2.96,3.24,3.80,2.35
+82,2.76,2.76,2.97,3.24,3.80,2.35
+83,2.76,2.76,2.97,3.24,3.80,2.36
+84,2.76,2.76,2.97,3.24,3.80,2.37
+85,2.76,2.76,2.98,3.24,3.80,2.38
+86,2.77,2.77,2.98,3.24,3.80,2.38
+87,2.77,2.77,2.98,3.24,3.80,2.39
+88,2.77,2.77,2.98,3.24,3.80,2.40
+89,2.77,2.77,2.99,3.24,3.80,2.41
+90,2.78,2.78,2.99,3.24,3.80,2.41
+91,2.78,2.78,2.99,3.23,3.80,2.42
+92,2.78,2.78,3.00,3.23,3.80,2.43
+93,2.78,2.78,3.00,3.23,3.80,2.43
+94,2.79,2.79,3.00,3.23,3.80,2.44
+95,2.79,2.79,3.01,3.23,3.80,2.45
+96,2.79,2.79,3.01,3.23,3.80,2.46
+97,2.79,2.79,3.01,3.23,3.80,2.46
+98,2.80,2.80,3.01,3.23,3.80,2.47
+99,2.80,2.80,3.02,3.23,3.80,2.48
+100,2.92,2.80,3.02,3.23,3.80,2.49
+101,2.92,2.80,3.02,3.23,3.80,2.49
+102,2.93,2.81,3.03,3.23,3.80,2.50
+103,2.93,2.81,3.03,3.23,3.80,2.51
+104,2.93,2.81,3.03,3.23,3.80,2.51
+105,2.94,2.81,3.04,3.23,3.80,2.52
+106,2.94,2.82,3.04,3.22,3.79,2.53
+107,2.94,2.82,3.04,3.22,3.79,2.54
+108,2.95,2.82,3.04,3.22,3.79,2.54
+109,2.95,2.82,3.05,3.22,3.79,2.55
+110,2.96,2.83,3.05,3.22,3.79,2.56
+111,2.96,2.83,3.05,3.22,3.79,2.57
+112,2.96,2.83,3.06,3.22,3.79,2.57
+113,2.97,2.83,3.06,3.22,3.79,2.58
+114,2.97,2.84,3.06,3.22,3.79,2.59
+115,2.97,2.84,3.07,3.22,3.79,2.59
+116,2.98,2.84,3.07,3.21,3.78,2.60
+117,2.98,2.84,3.07,3.21,3.78,2.61
+118,2.98,2.85,3.07,3.21,3.78,2.62
+119,2.99,2.85,3.08,3.21,3.78,2.62
+120,2.99,2.85,3.08,3.21,3.78,2.63
+130,2.98,2.88,3.12,3.22,3.79,
+140,2.97,2.91,3.15,3.22,3.80,
+150,2.98,2.95,3.19,3.25,3.81,
+160,2.99,2.98,3.23,3.28,3.81,
+170,3.02,3.03,3.27,3.34,3.82,
+180,3.05,3.08,3.31,3.40,3.82,
+190,3.09,3.14,3.37,3.48,3.85,
+200,3.12,3.19,3.42,3.55,3.87,
+220,3.17,3.32,3.53,3.70,3.92,
+240,3.25,3.45,3.64,3.84,3.97,
+260,3.45,3.58,3.74,3.93,4.03,
+280,3.65,3.69,3.83,4.00,4.10,
+300,3.71,3.78,3.90,4.04,4.20,
+320,3.79,3.84,3.95,4.12,4.31,
+340,3.86,3.88,4.02,4.26,4.44,
+360,3.92,3.95,4.11,4.41,4.56,
+380,3.96,4.03,4.21,4.55,4.66,
+400,3.99,4.11,4.30,4.69,4.75,
+420,4.02,4.15,4.34,4.73,4.79,
+440,4.08,4.20,4.39,4.78,4.84,
+460,4.17,4.29,4.48,4.87,4.93,
+480,4.28,4.40,4.59,4.98,5.04,
+500,4.41,4.53,4.72,5.11,5.17,
+520,4.54,4.66,4.85,5.24,5.30,
+540,4.65,4.78,4.97,5.36,5.42,
+560,4.74,4.86,5.05,5.44,5.50,
+580,4.79,4.91,5.10,5.49,5.55,
+600,4.82,4.94,5.13,5.52,5.58`,
+
+            'College Golfer': `0,0,0,0,0,0,0
+1,,1.11,1.35,2.34,1.88,1.01
+2,,1.36,1.46,2.35,2.03,1.03
+3,,1.60,1.57,2.36,2.18,1.04
+4,,1.74,1.68,2.37,2.34,1.13
+5,,1.86,1.81,2.38,2.50,1.22
+6,,1.93,1.91,2.40,2.64,1.32
+7,,2.00,2.01,2.42,2.78,1.41
+8,,2.06,2.11,2.43,2.91,1.49
+9,,2.11,2.19,2.44,3.03,1.58
+10,,2.14,2.25,2.45,3.11,1.62
+11,,2.17,2.28,2.46,3.15,1.65
+12,,2.19,2.32,2.48,3.19,1.69
+13,,2.22,2.35,2.49,3.24,1.72
+14,,2.24,2.38,2.50,3.28,1.75
+15,,2.27,2.42,2.51,3.32,1.79
+16,,2.31,2.45,2.52,3.36,1.81
+17,,2.34,2.48,2.53,3.40,1.82
+18,,2.36,2.52,2.54,3.45,1.84
+19,,2.39,2.56,2.55,3.49,1.86
+20,,2.42,2.59,2.56,3.54,1.88
+21,,2.43,2.60,2.57,3.55,1.89
+22,,2.44,2.61,2.59,3.56,1.90
+23,,2.45,2.62,2.60,3.57,1.91
+24,,2.46,2.64,2.62,3.59,1.92
+25,,2.47,2.65,2.63,3.60,1.93
+26,,2.48,2.66,2.65,3.61,1.94
+27,,2.49,2.67,2.66,3.62,1.95
+28,,2.50,2.68,2.68,3.64,1.97
+29,,2.51,2.70,2.69,3.65,1.98
+30,,2.52,2.71,2.71,3.66,1.99
+31,,2.53,2.72,2.73,3.67,1.99
+32,,2.54,2.73,2.74,3.68,2.00
+33,,2.55,2.74,2.76,3.69,2.02
+34,,2.56,2.75,2.77,3.70,2.03
+35,,2.57,2.76,2.79,3.71,2.03
+36,,2.58,2.77,2.80,3.72,2.04
+37,,2.59,2.78,2.82,3.73,2.05
+38,,2.60,2.79,2.83,3.75,2.06
+39,,2.61,2.80,2.85,3.76,2.06
+40,,2.62,2.81,2.86,3.77,2.07
+41,,2.63,2.81,2.88,3.78,2.08
+42,,2.63,2.82,2.89,3.78,2.08
+43,,2.64,2.82,2.91,3.79,2.09
+44,,2.65,2.83,2.93,3.80,2.10
+45,,2.66,2.84,2.94,3.80,2.11
+46,,2.66,2.84,2.96,3.80,2.11
+47,,2.67,2.85,2.98,3.81,2.12
+48,,2.67,2.85,2.99,3.81,2.13
+49,,2.68,2.85,3.02,3.82,2.14
+50,,2.68,2.86,3.04,3.82,2.14
+51,2.70,2.69,2.87,3.05,3.83,2.15
+52,2.70,2.69,2.87,3.07,3.83,2.16
+53,2.71,2.70,2.88,3.08,3.84,2.16
+54,2.71,2.70,2.89,3.10,3.84,2.17
+55,2.72,2.71,2.90,3.12,3.85,2.18
+56,2.72,2.71,2.91,3.13,3.85,2.19
+57,2.73,2.72,2.92,3.15,3.86,2.19
+58,2.73,2.72,2.93,3.17,3.87,2.20
+59,2.74,2.73,2.94,3.18,3.88,2.21
+60,2.74,2.73,2.95,3.20,3.88,2.21
+61,2.74,2.73,2.95,3.20,3.88,2.22
+62,2.75,2.74,2.96,3.21,3.88,2.23
+63,2.75,2.74,2.96,3.21,3.88,2.24
+64,2.75,2.74,2.96,3.22,3.88,2.24
+65,2.75,2.74,2.96,3.22,3.88,2.25
+66,2.76,2.75,2.97,3.23,3.88,2.26
+67,2.76,2.75,2.97,3.23,3.88,2.27
+68,2.76,2.75,2.97,3.25,3.88,2.27
+69,2.76,2.75,2.98,3.25,3.88,2.28
+70,2.77,2.76,2.99,3.26,3.88,2.29
+71,2.77,2.76,2.99,3.26,3.88,2.29
+72,2.77,2.76,2.99,3.26,3.88,2.30
+73,2.77,2.76,2.99,3.27,3.88,2.31
+74,2.78,2.78,3.00,3.27,3.88,2.32
+75,2.78,2.78,3.00,3.28,3.87,2.32
+76,2.78,2.78,3.00,3.28,3.87,2.33
+77,2.78,2.78,3.00,3.29,3.87,2.34
+78,2.79,2.79,3.01,3.29,3.87,2.35
+79,2.79,2.79,3.01,3.30,3.87,2.35
+80,2.79,2.79,3.01,3.30,3.87,2.36
+81,2.79,2.79,3.01,3.30,3.88,2.37
+82,2.80,2.80,3.02,3.30,3.88,2.37
+83,2.80,2.80,3.02,3.30,3.88,2.38
+84,2.80,2.80,3.02,3.30,3.88,2.39
+85,2.80,2.80,3.03,3.30,3.88,2.40
+86,2.81,2.81,3.03,3.30,3.88,2.40
+87,2.81,2.81,3.03,3.30,3.88,2.41
+88,2.81,2.81,3.03,3.30,3.88,2.42
+89,2.81,2.81,3.04,3.30,3.88,2.43
+90,2.82,2.82,3.04,3.30,3.88,2.43
+91,2.82,2.82,3.04,3.29,3.88,2.44
+92,2.82,2.82,3.05,3.29,3.88,2.45
+93,2.82,2.82,3.05,3.30,3.88,2.45
+94,2.83,2.83,3.05,3.30,3.88,2.46
+95,2.83,2.83,3.07,3.30,3.88,2.47
+96,2.83,2.83,3.07,3.30,3.88,2.48
+97,2.83,2.83,3.07,3.30,3.88,2.48
+98,2.84,2.84,3.07,3.30,3.88,2.49
+99,2.84,2.84,3.08,3.30,3.88,2.51
+100,2.97,2.84,3.08,3.30,3.88,2.52
+101,2.97,2.85,3.08,3.30,3.88,2.52
+102,2.98,2.86,3.09,3.30,3.88,2.53
+103,2.98,2.86,3.09,3.30,3.89,2.54
+104,2.98,2.86,3.09,3.30,3.89,2.54
+105,2.99,2.86,3.10,3.30,3.89,2.55
+106,2.99,2.87,3.10,3.29,3.88,2.56
+107,2.99,2.87,3.10,3.29,3.88,2.57
+108,3.00,2.87,3.10,3.29,3.88,2.57
+109,3.00,2.87,3.11,3.29,3.88,2.58
+110,3.01,2.88,3.11,3.29,3.88,2.59
+111,3.01,2.88,3.11,3.29,3.88,2.60
+112,3.01,2.88,3.12,3.29,3.88,2.60
+113,3.02,2.88,3.12,3.29,3.88,2.61
+114,3.02,2.89,3.12,3.29,3.88,2.62
+115,3.02,2.89,3.13,3.29,3.88,2.62
+116,3.03,2.89,3.13,3.28,3.87,2.63
+117,3.03,2.89,3.13,3.28,3.87,2.64
+118,3.03,2.90,3.14,3.28,3.87,2.65
+119,3.04,2.90,3.15,3.29,3.87,2.65
+120,3.04,2.90,3.15,3.29,3.87,2.66
+130,3.03,2.94,3.19,3.30,3.89,
+140,3.02,2.97,3.23,3.30,3.90,
+150,3.03,3.01,3.27,3.34,3.92,
+160,3.04,3.05,3.31,3.37,3.92,
+170,3.07,3.10,3.36,3.44,3.94,
+180,3.10,3.16,3.40,3.50,3.94,
+190,3.15,3.22,3.47,3.59,3.98,
+200,3.18,3.28,3.53,3.67,4.00,
+220,3.23,3.42,3.65,3.83,4.06,
+240,3.32,3.56,3.76,3.98,4.12,
+260,3.53,3.69,3.87,4.07,4.18,
+280,3.73,3.81,3.97,4.15,4.26,
+300,3.80,3.91,4.04,4.19,4.36,
+320,3.89,3.97,4.10,4.28,4.48,
+340,3.97,4.01,4.17,4.43,4.62,
+360,4.03,4.09,4.27,4.59,4.75,
+380,4.08,4.17,4.37,4.74,4.85,
+400,4.11,4.26,4.47,4.88,4.95,
+420,4.14,4.30,4.51,4.93,4.99,
+440,4.21,4.35,4.57,4.98,5.05,
+460,4.31,4.45,4.66,5.08,5.14,
+480,4.42,4.57,4.78,5.19,5.26,
+500,4.56,4.70,4.91,5.33,5.40,
+520,4.70,4.84,5.05,5.47,5.54,
+540,4.82,4.97,5.18,5.60,5.66,
+560,4.91,5.05,5.26,5.68,5.75,
+580,4.97,5.10,5.32,5.74,5.80,
+600,5.00,5.14,5.35,5.77,5.84`,
+
+            'Scratch Golfer': `0,0,0,0,0,0,0
+1,,1.11,1.36,2.37,1.90,1.02
+2,,1.36,1.47,2.38,2.06,1.04
+3,,1.61,1.59,2.39,2.21,1.05
+4,,1.75,1.70,2.40,2.36,1.14
+5,,1.87,1.82,2.41,2.53,1.23
+6,,1.94,1.92,2.42,2.67,1.32
+7,,2.01,2.02,2.44,2.81,1.41
+8,,2.07,2.13,2.45,2.95,1.50
+9,,2.12,2.21,2.46,3.06,1.59
+10,,2.16,2.27,2.47,3.14,1.63
+11,,2.19,2.30,2.48,3.19,1.66
+12,,2.21,2.34,2.51,3.23,1.70
+13,,2.24,2.37,2.52,3.28,1.73
+14,,2.26,2.40,2.53,3.32,1.76
+15,,2.29,2.45,2.54,3.36,1.80
+16,,2.32,2.48,2.55,3.40,1.82
+17,,2.35,2.51,2.56,3.45,1.83
+18,,2.37,2.55,2.57,3.50,1.86
+19,,2.40,2.58,2.58,3.54,1.88
+20,,2.43,2.61,2.59,3.58,1.90
+21,,2.44,2.62,2.60,3.59,1.91
+22,,2.45,2.63,2.62,3.60,1.92
+23,,2.47,2.64,2.63,3.61,1.93
+24,,2.48,2.66,2.65,3.64,1.94
+25,,2.49,2.68,2.67,3.65,1.95
+26,,2.50,2.69,2.69,3.66,1.96
+27,,2.51,2.70,2.70,3.67,1.97
+28,,2.52,2.71,2.72,3.69,1.99
+29,,2.53,2.73,2.73,3.70,2.00
+30,,2.54,2.74,2.75,3.71,2.01
+31,,2.55,2.75,2.76,3.72,2.01
+32,,2.56,2.76,2.77,3.73,2.02
+33,,2.57,2.77,2.79,3.74,2.03
+34,,2.58,2.78,2.80,3.76,2.04
+35,,2.59,2.79,2.82,3.77,2.04
+36,,2.60,2.80,2.84,3.78,2.05
+37,,2.61,2.81,2.86,3.79,2.06
+38,,2.63,2.83,2.87,3.80,2.07
+39,,2.64,2.84,2.89,3.81,2.07
+40,,2.65,2.85,2.90,3.82,2.08
+41,,2.66,2.85,2.92,3.83,2.09
+42,,2.66,2.86,2.93,3.83,2.09
+43,,2.67,2.86,2.95,3.84,2.10
+44,,2.67,2.86,2.97,3.86,2.11
+45,,2.68,2.87,2.98,3.86,2.13
+46,,2.68,2.87,3.01,3.86,2.13
+47,,2.69,2.88,3.03,3.87,2.14
+48,,2.69,2.88,3.04,3.87,2.15
+49,,2.70,2.88,3.06,3.88,2.16
+50,,2.70,2.89,3.08,3.88,2.16
+51,2.73,2.71,2.90,3.09,3.89,2.17
+52,2.73,2.71,2.91,3.11,3.89,2.18
+53,2.75,2.73,2.92,3.12,3.90,2.18
+54,2.75,2.73,2.93,3.14,3.90,2.19
+55,2.76,2.74,2.94,3.17,3.92,2.20
+56,2.76,2.74,2.95,3.18,3.92,2.21
+57,2.77,2.75,2.96,3.20,3.93,2.21
+58,2.77,2.75,2.97,3.22,3.93,2.22
+59,2.78,2.76,2.98,3.23,3.94,2.23
+60,2.78,2.76,2.99,3.25,3.94,2.23
+61,2.78,2.76,2.99,3.25,3.94,2.24
+62,2.79,2.77,3.00,3.26,3.94,2.25
+63,2.79,2.77,3.00,3.26,3.94,2.26
+64,2.79,2.77,3.00,3.27,3.94,2.26
+65,2.79,2.77,3.01,3.28,3.94,2.27
+66,2.80,2.78,3.02,3.29,3.95,2.28
+67,2.80,2.78,3.02,3.29,3.95,2.29
+68,2.80,2.78,3.02,3.30,3.95,2.29
+69,2.80,2.78,3.02,3.30,3.95,2.30
+70,2.81,2.80,3.03,3.31,3.95,2.31
+71,2.81,2.80,3.03,3.31,3.95,2.31
+72,2.81,2.80,3.03,3.31,3.95,2.32
+73,2.81,2.80,3.03,3.32,3.95,2.33
+74,2.82,2.81,3.04,3.32,3.95,2.34
+75,2.82,2.81,3.04,3.33,3.94,2.34
+76,2.82,2.81,3.04,3.33,3.94,2.35
+77,2.82,2.81,3.04,3.35,3.94,2.36
+78,2.83,2.82,3.05,3.35,3.94,2.37
+79,2.83,2.82,3.06,3.36,3.95,2.37
+80,2.83,2.82,3.06,3.36,3.95,2.38
+81,2.83,2.82,3.06,3.36,3.95,2.40
+82,2.84,2.83,3.07,3.36,3.95,2.40
+83,2.84,2.83,3.07,3.36,3.95,2.41
+84,2.84,2.83,3.07,3.36,3.95,2.42
+85,2.84,2.84,3.08,3.36,3.95,2.43
+86,2.85,2.85,3.08,3.36,3.95,2.43
+87,2.85,2.85,3.08,3.36,3.95,2.44
+88,2.85,2.85,3.08,3.36,3.95,2.45
+89,2.85,2.85,3.09,3.37,3.95,2.46
+90,2.86,2.86,3.09,3.37,3.96,2.46
+91,2.86,2.86,3.09,3.36,3.96,2.47
+92,2.86,2.86,3.11,3.36,3.96,2.48
+93,2.86,2.86,3.11,3.36,3.96,2.48
+94,2.88,2.87,3.11,3.36,3.96,2.49
+95,2.88,2.87,3.12,3.36,3.96,2.50
+96,2.88,2.87,3.12,3.36,3.96,2.51
+97,2.88,2.87,3.12,3.36,3.96,2.51
+98,2.89,2.89,3.12,3.36,3.96,2.52
+99,2.89,2.89,3.13,3.36,3.96,2.53
+100,3.01,2.89,3.13,3.36,3.96,2.54
+101,3.01,2.89,3.13,3.36,3.97,2.54
+102,3.02,2.90,3.14,3.36,3.97,2.55
+103,3.02,2.90,3.14,3.37,3.97,2.56
+104,3.02,2.90,3.15,3.37,3.97,2.56
+105,3.03,2.90,3.16,3.37,3.97,2.57
+106,3.03,2.91,3.16,3.36,3.96,2.58
+107,3.03,2.91,3.16,3.36,3.96,2.59
+108,3.04,2.91,3.16,3.36,3.96,2.59
+109,3.04,2.91,3.17,3.36,3.96,2.60
+110,3.05,2.92,3.17,3.36,3.96,2.61
+111,3.05,2.93,3.17,3.36,3.96,2.62
+112,3.05,2.93,3.18,3.36,3.97,2.63
+113,3.06,2.93,3.18,3.36,3.97,2.64
+114,3.06,2.94,3.18,3.36,3.97,2.65
+115,3.06,2.94,3.20,3.36,3.97,2.65
+116,3.07,2.94,3.20,3.36,3.96,2.66
+117,3.08,2.94,3.20,3.36,3.96,2.67
+118,3.08,2.95,3.20,3.36,3.96,2.68
+119,3.09,2.95,3.21,3.36,3.96,2.68
+120,3.09,2.95,3.21,3.36,3.96,2.69
+130,3.08,2.99,3.26,3.38,3.98,
+140,3.07,3.03,3.30,3.39,4.00,
+150,3.08,3.08,3.35,3.43,4.02,
+160,3.09,3.12,3.40,3.47,4.03,
+170,3.13,3.18,3.45,3.54,4.05,
+180,3.16,3.24,3.50,3.61,4.06,
+190,3.20,3.31,3.57,3.70,4.10,
+200,3.23,3.37,3.63,3.78,4.13,
+220,3.29,3.52,3.76,3.96,4.21,
+240,3.38,3.66,3.89,4.12,4.26,
+260,3.60,3.81,4.00,4.22,4.34,
+280,3.82,3.93,4.10,4.30,4.42,
+300,3.89,4.03,4.18,4.35,4.53,
+320,3.98,4.10,4.24,4.44,4.66,
+340,4.07,4.15,4.32,4.60,4.80,
+360,4.14,4.23,4.43,4.77,4.94,
+380,4.19,4.32,4.54,4.92,5.05,
+400,4.23,4.41,4.64,5.08,5.15,
+420,4.26,4.45,4.68,5.13,5.20,
+440,4.33,4.51,4.74,5.18,5.26,
+460,4.44,4.61,4.84,5.28,5.36,
+480,4.56,4.73,4.96,5.41,5.48,
+500,4.71,4.87,5.11,5.55,5.63,
+520,4.85,5.02,5.25,5.70,5.78,
+540,4.98,5.15,5.39,5.83,5.91,
+560,5.08,5.24,5.48,5.93,6.00,
+580,5.14,5.30,5.54,5.98,6.06,
+600,5.18,5.34,5.57,6.02,6.10`
+        };
+
+        // ============================================================
+        // BENCHMARK PARSING & LOOKUP
+        // ============================================================
+        function parseBenchmarkCSV(csv) {
+            const data = {};
+            csv.split('\n').forEach(line => {
+                const parts = line.split(',');
+                const dist = parseInt(parts[0]);
+                if (isNaN(dist)) return;
+                data[dist] = {
+                    Tee: parts[1] ? parseFloat(parts[1]) : null,
+                    Fairway: parts[2] ? parseFloat(parts[2]) : null,
+                    Rough: parts[3] ? parseFloat(parts[3]) : null,
+                    Sand: parts[4] ? parseFloat(parts[4]) : null,
+                    Recovery: parts[5] ? parseFloat(parts[5]) : null,
+                    Green: parts[6] ? parseFloat(parts[6]) : null
+                };
+            });
+            return data;
+        }
+
+        // Parse all benchmarks on load
+        const PARSED_BENCHMARKS = {
+            'PGA Tour': parseBenchmarkCSV(BENCHMARKS['PGA Tour']),
+            'College Golfer': parseBenchmarkCSV(BENCHMARKS['College Golfer']),
+            'Scratch Golfer': parseBenchmarkCSV(BENCHMARKS['Scratch Golfer'])
+        };
+
+        function getBaselineStrokes(distance, lie, benchmarkName) {
+            const benchmarkData = PARSED_BENCHMARKS[benchmarkName];
+            let lookupDistance = Math.round(distance);
+            
+            // Green distances are in feet, cap at 120
+            if (lie === 'Green' && lookupDistance > 120) {
+                lookupDistance = 120;
+            }
+            
+            // Handle distances beyond 600 yards
+            if (lie !== 'Green' && lookupDistance > 600) {
+                const extraYards = lookupDistance - 600;
+                const base600 = benchmarkData[600]?.[lie];
+                return base600 ? base600 + (extraYards * 0.01) : null;
+            }
+            
+            // Direct lookup
+            if (benchmarkData[lookupDistance]?.[lie] !== null && benchmarkData[lookupDistance]?.[lie] !== undefined) {
+                return benchmarkData[lookupDistance][lie];
+            }
+            
+            // Interpolate between known distances
+            const distances = Object.keys(benchmarkData).map(Number).sort((a, b) => a - b);
+            let lower = null, upper = null;
+            
+            for (let i = 0; i < distances.length - 1; i++) {
+                if (distances[i] <= lookupDistance && distances[i + 1] >= lookupDistance) {
+                    lower = distances[i];
+                    upper = distances[i + 1];
+                    break;
+                }
+            }
+            
+            if (lower !== null && upper !== null) {
+                const lowerVal = benchmarkData[lower]?.[lie];
+                const upperVal = benchmarkData[upper]?.[lie];
+                if (lowerVal !== null && upperVal !== null) {
+                    const ratio = (lookupDistance - lower) / (upper - lower);
+                    return lowerVal + (upperVal - lowerVal) * ratio;
+                }
+            }
+            
+            return null;
+        }
+
+        function calculateStrokesGained(startDistance, startLie, endDistance, endLie, penalty, benchmarkName) {
+            const startStrokes = getBaselineStrokes(startDistance, startLie, benchmarkName);
+            const endStrokes = getBaselineStrokes(endDistance, endLie, benchmarkName);
+            
+            if (startStrokes === null || endStrokes === null) {
+                return { startSG: null, endSG: null, sg: null };
+            }
+            
+            const strokesTaken = 1 + (penalty ? 1 : 0);
+            const sg = startStrokes - (strokesTaken + endStrokes);
+            
+            return { startSG: startStrokes, endSG: endStrokes, sg: sg };
+        }
+
+        // ============================================================
+        // UTILITY FUNCTIONS
+        // ============================================================
+        function formatSG(sg) {
+            if (sg === null) return 'N/A';
+            return sg >= 0 ? `+${sg.toFixed(2)}` : sg.toFixed(2);
+        }
+
+        function getSGClass(sg) {
+            if (sg === null) return '';
+            return sg >= 0 ? 'positive' : 'negative';
+        }
+
+        // ============================================================
+        // MAIN COMPONENT
+        // ============================================================
+        function GolfTracker() {
+            const [step, setStep] = useState('round-info');
+            const [roundInfo, setRoundInfo] = useState({
+                playerName: '',
+                date: new Date().toISOString().split('T')[0],
+                course: '',
+                tournament: '',
+                weatherDifficulty: '',
+                courseDifficulty: '',
+                benchmark: 'College Golfer'
+            });
+            
+            const [currentHole, setCurrentHole] = useState(1);
+            const [holes, setHoles] = useState(Array.from({ length: 18 }, () => ({ shots: [] })));
+            const [currentShot, setCurrentShot] = useState({
+                startDistance: '',
+                startLie: 'Tee',
+                endDistance: '',
+                endLie: 'Fairway',
+                penalty: false
+            });
+            const [submitting, setSubmitting] = useState(false);
+            const [historyExpanded, setHistoryExpanded] = useState(false);
+            
+            const endDistanceRef = useRef(null);
+            const startDistanceRef = useRef(null);
+
+            const weatherOptions = ['Cold', 'Windy', 'Cold and Windy', 'Normal'];
+            const courseOptions = ['Hard', 'Standard', 'Easy'];
+            const lieTypes = ['Tee', 'Fairway', 'Rough', 'Sand', 'Recovery', 'Green'];
+            const benchmarkOptions = ['PGA Tour', 'College Golfer', 'Scratch Golfer'];
+
+            const benchmarkDescriptions = {
+                'PGA Tour': 'Professional level - most difficult benchmark',
+                'College Golfer': 'D1/Elite amateur level (~+3 handicap)',
+                'Scratch Golfer': 'Scratch/low handicap level (~0 handicap)'
+            };
+
+            // ===== HANDLERS =====
+            const handleRoundInfoSubmit = () => {
+                if (!roundInfo.playerName || !roundInfo.date || !roundInfo.course || 
+                    !roundInfo.tournament || !roundInfo.weatherDifficulty || !roundInfo.courseDifficulty) {
+                    alert('Please fill in all round information fields');
+                    return;
+                }
+                setStep('shot-entry');
+                setTimeout(() => startDistanceRef.current?.focus(), 100);
+            };
+
+            const addShot = () => {
+                if (!currentShot.startDistance || !currentShot.endDistance) {
+                    alert('Please enter both start and end distances');
+                    return;
+                }
+
+                const newHoles = [...holes];
+                const sgData = calculateStrokesGained(
+                    parseFloat(currentShot.startDistance),
+                    currentShot.startLie,
+                    parseFloat(currentShot.endDistance),
+                    currentShot.endLie,
+                    currentShot.penalty,
+                    roundInfo.benchmark
+                );
+                
+                newHoles[currentHole - 1].shots.push({
+                    shotNumber: newHoles[currentHole - 1].shots.length + 1,
+                    startDistance: parseFloat(currentShot.startDistance),
+                    startLie: currentShot.startLie,
+                    endDistance: parseFloat(currentShot.endDistance),
+                    endLie: currentShot.endLie,
+                    penalty: currentShot.penalty,
+                    ...sgData
+                });
+                setHoles(newHoles);
+
+                // Hole complete - ball in hole
+                if (parseFloat(currentShot.endDistance) === 0) {
+                    if (currentHole < 18) {
+                        setCurrentHole(currentHole + 1);
+                        setCurrentShot({ startDistance: '', startLie: 'Tee', endDistance: '', endLie: 'Fairway', penalty: false });
+                        setTimeout(() => startDistanceRef.current?.focus(), 50);
+                    } else {
+                        setStep('complete');
+                    }
+                } else {
+                    // Continue on same hole
+                    setCurrentShot({
+                        startDistance: currentShot.endDistance,
+                        startLie: currentShot.endLie,
+                        endDistance: '',
+                        endLie: currentShot.endLie === 'Green' ? 'Green' : 'Fairway',
+                        penalty: false
+                    });
+                    setTimeout(() => endDistanceRef.current?.focus(), 50);
+                }
+            };
+
+            const removePreviousShot = () => {
+                const currentHoleData = holes[currentHole - 1];
+                if (currentHoleData.shots.length === 0) {
+                    alert('No shots to remove on this hole');
+                    return;
+                }
+                
+                const newHoles = [...holes];
+                newHoles[currentHole - 1].shots.pop();
+                setHoles(newHoles);
+                
+                if (newHoles[currentHole - 1].shots.length > 0) {
+                    const lastShot = newHoles[currentHole - 1].shots[newHoles[currentHole - 1].shots.length - 1];
+                    setCurrentShot({
+                        startDistance: lastShot.endDistance.toString(),
+                        startLie: lastShot.endLie,
+                        endDistance: '',
+                        endLie: lastShot.endLie === 'Green' ? 'Green' : 'Fairway',
+                        penalty: false
+                    });
+                } else {
+                    setCurrentShot({ startDistance: '', startLie: 'Tee', endDistance: '', endLie: 'Fairway', penalty: false });
+                }
+            };
+
+            const goToPreviousHole = () => {
+                if (currentHole === 1) {
+                    alert('Already on the first hole');
+                    return;
+                }
+                setCurrentHole(currentHole - 1);
+                const prevHoleData = holes[currentHole - 2];
+                if (prevHoleData.shots.length > 0) {
+                    const lastShot = prevHoleData.shots[prevHoleData.shots.length - 1];
+                    setCurrentShot({
+                        startDistance: lastShot.endDistance.toString(),
+                        startLie: lastShot.endLie,
+                        endDistance: '',
+                        endLie: lastShot.endLie === 'Green' ? 'Green' : 'Fairway',
+                        penalty: false
+                    });
+                } else {
+                    setCurrentShot({ startDistance: '', startLie: 'Tee', endDistance: '', endLie: 'Fairway', penalty: false });
+                }
+            };
+
+            const prepareDataForExport = () => {
+                const roundId = `R${Date.now()}`;
+                const data = [];
+                let runningScore = 0;
+                
+                holes.forEach((hole, holeIdx) => {
+                    hole.shots.forEach((shot) => {
+                        runningScore += 1 + (shot.penalty ? 1 : 0);
+                        data.push({
+                            'Player': roundInfo.playerName,
+                            'Round ID': roundId,
+                            'Date': roundInfo.date,
+                            'Course': roundInfo.course,
+                            'Weather Difficulty': roundInfo.weatherDifficulty,
+                            'Course Difficulty': roundInfo.courseDifficulty,
+                            'Tournament': roundInfo.tournament,
+                            'Benchmark': roundInfo.benchmark,
+                            'Shot': shot.shotNumber,
+                            'Hole': holeIdx + 1,
+                            'Score': runningScore,
+                            'Starting Distance': shot.startDistance,
+                            'Starting Location': shot.startLie,
+                            'Ending Distance': shot.endDistance,
+                            'Ending Location': shot.endLie,
+                            'Penalty': shot.penalty ? 'Yes' : 'No',
+                            'Starting SG': shot.startSG !== null ? shot.startSG.toFixed(2) : '',
+                            'Ending SG': shot.endSG !== null ? shot.endSG.toFixed(2) : '',
+                            'Strokes Gained': shot.sg !== null ? shot.sg.toFixed(2) : ''
+                        });
+                    });
+                });
+                return data;
+            };
+
+            const submitToGoogleSheets = async () => {
+                if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+                    alert('Apps Script not configured yet. Please download Excel file instead.');
+                    return;
+                }
+                
+                setSubmitting(true);
+                try {
+                    await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ data: prepareDataForExport() })
+                    });
+                    alert('Round successfully submitted to Google Sheets!');
+                    setStep('submitted');
+                } catch (error) {
+                    console.error(error);
+                    alert('Error submitting. Please try downloading Excel file instead.');
+                } finally {
+                    setSubmitting(false);
+                }
+            };
+
+            const downloadExcel = () => {
+                const ws = XLSX.utils.json_to_sheet(prepareDataForExport());
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Round Data');
+                XLSX.writeFile(wb, `${roundInfo.playerName}_${roundInfo.course}_${roundInfo.date}.xlsx`);
+            };
+
+            // ===== RENDER: ROUND INFO =====
+            if (step === 'round-info') {
+                return (
+                    <div className="container">
+                        <div className="card">
+                            <div className="header">
+                                <h1>Round Information</h1>
+                            </div>
+                            
+                            <div className="round-info-grid">
+                                <div className="form-group">
+                                    <label className="form-label">Player Name</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-input" 
+                                        value={roundInfo.playerName}
+                                        onChange={(e) => setRoundInfo({...roundInfo, playerName: e.target.value})} 
+                                    />
+                                </div>
+                                
+                                <div className="form-group">
+                                    <label className="form-label">Date</label>
+                                    <input 
+                                        type="date" 
+                                        className="form-input" 
+                                        value={roundInfo.date}
+                                        onChange={(e) => setRoundInfo({...roundInfo, date: e.target.value})} 
+                                    />
+                                </div>
+                                
+                                <div className="form-group">
+                                    <label className="form-label">Course</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-input" 
+                                        value={roundInfo.course}
+                                        onChange={(e) => setRoundInfo({...roundInfo, course: e.target.value})} 
+                                    />
+                                </div>
+                                
+                                <div className="form-group">
+                                    <label className="form-label">Tournament</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-input" 
+                                        value={roundInfo.tournament}
+                                        onChange={(e) => setRoundInfo({...roundInfo, tournament: e.target.value})} 
+                                    />
+                                </div>
+                                
+                                <div className="form-group">
+                                    <label className="form-label">Weather Difficulty</label>
+                                    <select 
+                                        className="form-select" 
+                                        value={roundInfo.weatherDifficulty}
+                                        onChange={(e) => setRoundInfo({...roundInfo, weatherDifficulty: e.target.value})}
+                                    >
+                                        <option value="">Select weather</option>
+                                        {weatherOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                                    </select>
+                                </div>
+                                
+                                <div className="form-group">
+                                    <label className="form-label">Course Difficulty</label>
+                                    <select 
+                                        className="form-select" 
+                                        value={roundInfo.courseDifficulty}
+                                        onChange={(e) => setRoundInfo({...roundInfo, courseDifficulty: e.target.value})}
+                                    >
+                                        <option value="">Select difficulty</option>
+                                        {courseOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                                    </select>
+                                </div>
+                                
+                                <div className="form-group full-width">
+                                    <label className="form-label">Strokes Gained Benchmark</label>
+                                    <select 
+                                        className="form-select" 
+                                        value={roundInfo.benchmark}
+                                        onChange={(e) => setRoundInfo({...roundInfo, benchmark: e.target.value})}
+                                    >
+                                        {benchmarkOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                                    </select>
+                                    <div className="benchmark-info">
+                                        {benchmarkDescriptions[roundInfo.benchmark]}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button className="btn btn-primary" onClick={handleRoundInfoSubmit} style={{marginTop: '1rem'}}>
+                                Start Round
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // ===== RENDER: SHOT ENTRY =====
+            if (step === 'shot-entry') {
+                const currentHoleData = holes[currentHole - 1];
+                const isFirstShot = currentHoleData.shots.length === 0;
+                const lastShot = currentHoleData.shots[currentHoleData.shots.length - 1];
+                
+                const totalScore = holes.reduce((total, hole) => 
+                    total + hole.shots.length + hole.shots.filter(s => s.penalty).length, 0);
+                
+                const holeSG = currentHoleData.shots.reduce((sum, s) => sum + (s.sg || 0), 0);
+                
+                return (
+                    <div className="container">
+                        <div className="card">
+                            {/* Compact Header */}
+                            <div className="header-compact">
+                                <h1>Hole {currentHole}</h1>
+                                <div className="header-meta">
+                                    <div>{roundInfo.playerName}</div>
+                                    <div className="score">Score: {totalScore}</div>
+                                </div>
+                            </div>
+                            
+                            {/* Previous Shot Banner - Key Mobile Feature */}
+                            <div className={`prev-shot-banner ${isFirstShot ? 'first-shot' : ''}`}>
+                                <div className="prev-shot-info">
+                                    <div className="prev-shot-label">
+                                        {isFirstShot ? 'First Shot' : 'Previous Shot'}
+                                    </div>
+                                    <div className="prev-shot-detail">
+                                        {isFirstShot ? (
+                                            `Tee shot on Hole ${currentHole}`
+                                        ) : (
+                                            <>
+                                                {lastShot.startDistance}{lastShot.startLie === 'Green' ? 'ft' : 'y'} ({lastShot.startLie}) → {lastShot.endDistance}{lastShot.endLie === 'Green' ? 'ft' : 'y'} ({lastShot.endLie})
+                                                {lastShot.penalty && <span className="penalty-badge">+1 PEN</span>}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                {!isFirstShot && lastShot.sg !== null && (
+                                    <div className="prev-shot-sg">
+                                        <div className={`prev-shot-sg-value ${getSGClass(lastShot.sg)}`}>
+                                            {formatSG(lastShot.sg)}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Shot Input Section */}
+                            <div className="shot-input-section">
+                                <span className="section-label">Shot #{currentHoleData.shots.length + 1} - Starting Position</span>
+                                <div className="shot-input-row">
+                                    <div className="input-with-unit">
+                                        <input 
+                                            ref={startDistanceRef}
+                                            type="number" 
+                                            inputMode="decimal"
+                                            className="form-input" 
+                                            placeholder="Distance"
+                                            value={currentShot.startDistance}
+                                            disabled={!isFirstShot}
+                                            onChange={(e) => setCurrentShot({...currentShot, startDistance: e.target.value})}
+                                        />
+                                        <span className="input-unit">{currentShot.startLie === 'Green' ? 'ft' : 'yd'}</span>
+                                    </div>
+                                    <select 
+                                        className="form-select" 
+                                        value={currentShot.startLie}
+                                        disabled={!isFirstShot}
+                                        onChange={(e) => setCurrentShot({...currentShot, startLie: e.target.value})}
+                                    >
+                                        {lieTypes.map(l => <option key={l} value={l}>{l}</option>)}
+                                    </select>
+                                </div>
+                                
+                                <span className="section-label" style={{marginTop: '0.75rem'}}>Ending Position</span>
+                                <div className="shot-input-row">
+                                    <div className="input-with-unit">
+                                        <input 
+                                            ref={endDistanceRef}
+                                            type="number" 
+                                            inputMode="decimal"
+                                            className="form-input" 
+                                            placeholder="0 = holed"
+                                            value={currentShot.endDistance}
+                                            onChange={(e) => setCurrentShot({...currentShot, endDistance: e.target.value})}
+                                        />
+                                        <span className="input-unit">{currentShot.endLie === 'Green' ? 'ft' : 'yd'}</span>
+                                    </div>
+                                    <select 
+                                        className="form-select" 
+                                        value={currentShot.endLie}
+                                        onChange={(e) => setCurrentShot({...currentShot, endLie: e.target.value})}
+                                    >
+                                        {lieTypes.map(l => <option key={l} value={l}>{l}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            {/* Penalty Toggle */}
+                            <label className={`penalty-toggle ${currentShot.penalty ? 'active' : ''}`}>
+                                <input 
+                                    type="checkbox" 
+                                    className="penalty-checkbox"
+                                    checked={currentShot.penalty}
+                                    onChange={(e) => setCurrentShot({...currentShot, penalty: e.target.checked})}
+                                />
+                                <span className="penalty-text">Penalty Stroke (+1)</span>
+                            </label>
+                            
+                            {/* Main Action Button */}
+                            <button className="btn btn-primary" onClick={addShot}>
+                                {parseFloat(currentShot.endDistance) === 0 ? 'Complete Hole' : 'Add Shot'}
+                            </button>
+                            
+                            {/* Secondary Actions */}
+                            <div className="btn-group">
+                                <button className="btn btn-small btn-outline" onClick={removePreviousShot}>
+                                    Undo Shot
+                                </button>
+                                <button className="btn btn-small btn-outline" onClick={goToPreviousHole}>
+                                    Prev Hole
+                                </button>
+                            </div>
+                            
+                            {/* Collapsible Shot History */}
+                            {currentHoleData.shots.length > 0 && (
+                                <div className="shot-history">
+                                    <div 
+                                        className="shot-history-header" 
+                                        onClick={() => setHistoryExpanded(!historyExpanded)}
+                                    >
+                                        <h3>Hole {currentHole} • {currentHoleData.shots.length + currentHoleData.shots.filter(s => s.penalty).length} strokes • SG: {formatSG(holeSG)}</h3>
+                                        <span className="shot-history-toggle">
+                                            {historyExpanded ? '▲ Hide' : '▼ Show'}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className={`shot-history-content ${historyExpanded ? 'expanded' : ''}`}>
+                                        {currentHoleData.shots.map((shot, idx) => (
+                                            <div key={idx} className="shot-item">
+                                                <div className="shot-item-header">
+                                                    <div>
+                                                        <span className="shot-label">#{shot.shotNumber}</span>
+                                                        {' '}{shot.startDistance}{shot.startLie === 'Green' ? 'ft' : 'y'} → {shot.endDistance}{shot.endLie === 'Green' ? 'ft' : 'y'}
+                                                        {shot.penalty && <span className="penalty-badge">PEN</span>}
+                                                    </div>
+                                                    <span className={`shot-sg ${getSGClass(shot.sg)}`}>
+                                                        {formatSG(shot.sg)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+
+            // ===== RENDER: COMPLETE =====
+            if (step === 'complete' || step === 'submitted') {
+                const totalShots = holes.reduce((sum, h) => sum + h.shots.length, 0);
+                const totalPenalties = holes.reduce((sum, h) => sum + h.shots.filter(s => s.penalty).length, 0);
+                const totalScore = totalShots + totalPenalties;
+                const totalSG = holes.reduce((sum, h) => sum + h.shots.reduce((s, shot) => s + (shot.sg || 0), 0), 0);
+                
+                return (
+                    <div className="container">
+                        <div className="card" style={{textAlign: 'center'}}>
+                            <div className="success-icon">✓</div>
+                            <h1 className="success-title">Round Complete</h1>
+                            <p className="success-message">
+                                {roundInfo.playerName} at {roundInfo.course}
+                            </p>
+                            
+                            <div className="summary-card">
+                                <div className="summary-title">Round Summary</div>
+                                <div className="summary-item">
+                                    <span className="summary-label">Total Score</span>
+                                    <span className="summary-value">{totalScore}</span>
+                                </div>
+                                <div className="summary-item">
+                                    <span className="summary-label">Total Strokes Gained</span>
+                                    <span className="summary-value" style={{color: totalSG >= 0 ? '#2d5016' : '#c77d3a'}}>
+                                        {formatSG(totalSG)}
+                                    </span>
+                                </div>
+                                <div className="summary-item">
+                                    <span className="summary-label">Benchmark</span>
+                                    <span className="summary-value">{roundInfo.benchmark}</span>
+                                </div>
+                                <div className="summary-item">
+                                    <span className="summary-label">Date</span>
+                                    <span className="summary-value">{roundInfo.date}</span>
+                                </div>
+                            </div>
+                            
+                            {step === 'complete' && (
+                                <div style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}>
+                                    <button className="btn btn-primary" onClick={submitToGoogleSheets} disabled={submitting}>
+                                        {submitting ? 'Submitting...' : 'Submit to Google Sheets'}
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={downloadExcel}>
+                                        Download Excel
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {step === 'submitted' && (
+                                <div className="success-box">
+                                    ✓ Data submitted to Google Sheets
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GolfTracker />);
+    </script>
+</body>
+</html>
