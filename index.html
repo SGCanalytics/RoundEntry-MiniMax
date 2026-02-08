@@ -1017,22 +1017,29 @@
         function getBaselineStrokes(distance, lie, benchmarkName) {
             const benchmarkData = PARSED_BENCHMARKS[benchmarkName];
             let lookupDistance = Math.round(distance);
+            let lookupLie = lie;
+            
+            // Tee shot fallback: if tee distance < 50 yards, use Fairway baseline
+            // (Short tee shots compare to fairway expectations)
+            if (lie === 'Tee' && distance < 50) {
+                lookupLie = 'Fairway';
+            }
             
             // Green distances are in feet, cap at 120
-            if (lie === 'Green' && lookupDistance > 120) {
+            if (lookupLie === 'Green' && lookupDistance > 120) {
                 lookupDistance = 120;
             }
             
             // Handle distances beyond 600 yards
-            if (lie !== 'Green' && lookupDistance > 600) {
+            if (lookupLie !== 'Green' && lookupDistance > 600) {
                 const extraYards = lookupDistance - 600;
-                const base600 = benchmarkData[600]?.[lie];
+                const base600 = benchmarkData[600]?.[lookupLie];
                 return base600 ? base600 + (extraYards * 0.01) : null;
             }
             
             // Direct lookup
-            if (benchmarkData[lookupDistance]?.[lie] !== null && benchmarkData[lookupDistance]?.[lie] !== undefined) {
-                return benchmarkData[lookupDistance][lie];
+            if (benchmarkData[lookupDistance]?.[lookupLie] !== null && benchmarkData[lookupDistance]?.[lookupLie] !== undefined) {
+                return benchmarkData[lookupDistance][lookupLie];
             }
             
             // Interpolate between known distances
@@ -1048,8 +1055,8 @@
             }
             
             if (lower !== null && upper !== null) {
-                const lowerVal = benchmarkData[lower]?.[lie];
-                const upperVal = benchmarkData[upper]?.[lie];
+                const lowerVal = benchmarkData[lower]?.[lookupLie];
+                const upperVal = benchmarkData[upper]?.[lookupLie];
                 if (lowerVal !== null && upperVal !== null) {
                     const ratio = (lookupDistance - lower) / (upper - lower);
                     return lowerVal + (upperVal - lowerVal) * ratio;
@@ -1415,8 +1422,9 @@
                 const isFirstShot = currentHoleData.shots.length === 0;
                 const lastShot = currentHoleData.shots[currentHoleData.shots.length - 1];
                 
-                const totalScore = holes.reduce((total, hole) => 
-                    total + hole.shots.length + hole.shots.filter(s => s.penalty).length, 0);
+                // FIX: Calculate total score correctly: each shot is 1 stroke + penalty if any
+                const totalScore = holes.reduce((t, h) => 
+                    t + h.shots.reduce((s, shot) => s + 1 + (shot.penalty ? 1 : 0), 0), 0);
                 
                 const holeSG = currentHoleData.shots.reduce((sum, s) => sum + (s.sg || 0), 0);
                 
@@ -1599,9 +1607,9 @@
 
             // ===== RENDER: COMPLETE =====
             if (step === 'complete' || step === 'submitted') {
-                const totalShots = holes.reduce((sum, h) => sum + h.shots.length, 0);
-                const totalPenalties = holes.reduce((sum, h) => sum + h.shots.filter(s => s.penalty).length, 0);
-                const totalScore = totalShots + totalPenalties;
+                // FIX: Calculate total score correctly: each shot is 1 stroke + penalty if any
+                const totalScore = holes.reduce((t, h) => 
+                    t + h.shots.reduce((s, shot) => s + 1 + (shot.penalty ? 1 : 0), 0), 0);
                 const totalSG = holes.reduce((sum, h) => sum + h.shots.reduce((s, shot) => s + (shot.sg || 0), 0), 0);
                 
                 return (
