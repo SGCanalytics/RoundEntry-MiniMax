@@ -245,6 +245,11 @@
             border-color: #c77d3a;
         }
         
+        .penalty-toggle:focus {
+            outline: 2px solid #3d6b22;
+            outline-offset: 2px;
+        }
+        
         .penalty-checkbox {
             width: 1.25rem;
             height: 1.25rem;
@@ -1537,19 +1542,28 @@
                             </div>
                             
                             {/* Penalty Toggle */}
-                            <label className={`penalty-toggle ${currentShot.penalty ? 'active' : ''}`}>
+                            <label
+                                ref={penaltyRef}
+                                tabIndex="0"
+                                className={`penalty-toggle ${currentShot.penalty ? 'active' : ''}`}
+                                onClick={() => setCurrentShot({...currentShot, penalty: !currentShot.penalty})}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Tab' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        recordButtonRef.current?.focus();
+                                    }
+                                    if (e.key === ' ' || e.key === 'Enter') {
+                                        e.preventDefault();
+                                        setCurrentShot({...currentShot, penalty: !currentShot.penalty});
+                                    }
+                                }}
+                            >
                                 <input 
-                                    ref={penaltyRef}
                                     type="checkbox" 
                                     className="penalty-checkbox"
                                     checked={currentShot.penalty}
-                                    onChange={(e) => setCurrentShot({...currentShot, penalty: e.target.checked})}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Tab' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            recordButtonRef.current?.focus();
-                                        }
-                                    }}
+                                    onChange={(e) => e.preventDefault()}
+                                    tabIndex="-1"
                                 />
                                 <span className="penalty-text">Penalty Stroke (+1)</span>
                             </label>
