@@ -11,6 +11,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="teamConfigs.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -531,7 +532,14 @@
         // ============================================================
         // CONFIGURATION
         // ============================================================
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydum82VpgH-ZvxXMiZwtFq1nJiZx5vK2mnQSfI2FIzM1hbComsTE-tWQSt8q800Ifz/exec';
+        
+        // Get team configuration from URL
+        const currentTeamId = getTeamFromURL();
+        const currentTeamConfig = getTeamConfig(currentTeamId);
+        
+        // Dynamic App Script URL based on team
+        const APPS_SCRIPT_URL = currentTeamConfig?.googleSheetUrl || 
+            'https://script.google.com/macros/s/AKfycbydum82VpgH-ZvxXMiZwtFq1nJiZx5vK2mnQSfI2FIzM1hbComsTE-tWQSt8q800Ifz/exec';
 
         
         // ============================================================
@@ -1012,11 +1020,15 @@
             return data;
         }
 
-        // Parse all benchmarks on load
+        // Parse all benchmarks on load (men's + women's from teamConfigs)
         const PARSED_BENCHMARKS = {
             'PGA Tour': parseBenchmarkCSV(BENCHMARKS['PGA Tour']),
             'College Golfer': parseBenchmarkCSV(BENCHMARKS['College Golfer']),
-            'Scratch Golfer': parseBenchmarkCSV(BENCHMARKS['Scratch Golfer'])
+            'Scratch Golfer': parseBenchmarkCSV(BENCHMARKS['Scratch Golfer']),
+            // Women's benchmark from teamConfigs.js
+            ...(window.WOMENS_BENCHMARKS ? {
+                'College Golfer (Women)': parseBenchmarkCSV(window.WOMENS_BENCHMARKS['College Golfer (Women)'])
+            } : {})
         };
 
         function getBaselineStrokes(distance, lie, benchmarkName) {
@@ -1102,6 +1114,18 @@
         // MAIN COMPONENT
         // ============================================================
         function GolfTracker() {
+            // Get team-specific configuration
+            const teamId = getTeamFromURL();
+            const teamConfig = getTeamConfig(teamId);
+            
+            // Determine available benchmarks based on team
+            const availableBenchmarks = teamConfig?.availableBenchmarks || 
+                ['PGA Tour', 'College Golfer', 'Scratch Golfer'];
+            const defaultBenchmark = teamConfig?.defaultBenchmark || 'College Golfer';
+            
+            // Team display info
+            const teamDisplayName = teamConfig?.displayName || null;
+            
             const [step, setStep] = useState('round-info');
             const [roundInfo, setRoundInfo] = useState({
                 playerName: '',
@@ -1110,7 +1134,7 @@
                 tournament: '',
                 weatherDifficulty: '',
                 courseDifficulty: '',
-                benchmark: 'College Golfer'
+                benchmark: defaultBenchmark
             });
             
             const [currentHole, setCurrentHole] = useState(1);
@@ -1134,12 +1158,13 @@
             const weatherOptions = ['Cold', 'Windy', 'Cold and Windy', 'Normal'];
             const courseOptions = ['Hard', 'Standard', 'Easy'];
             const lieTypes = ['Tee', 'Fairway', 'Rough', 'Sand', 'Recovery', 'Green'];
-            const benchmarkOptions = ['PGA Tour', 'College Golfer', 'Scratch Golfer'];
 
             const benchmarkDescriptions = {
                 'PGA Tour': 'Professional level - most difficult benchmark',
                 'College Golfer': 'D1/Elite amateur level (~+3 handicap)',
-                'Scratch Golfer': 'Scratch/low handicap level (~0 handicap)'
+                'Scratch Golfer': 'Scratch/low handicap level (~0 handicap)',
+                // Women's benchmark
+                'College Golfer (Women)': 'D1/Elite amateur women\'s level (~+3 handicap)'
             };
 
             // ===== HANDLERS =====
@@ -1329,6 +1354,11 @@
                     <div className="container">
                         <div className="card">
                             <div className="header">
+                                {teamDisplayName && (
+                                    <div style={{fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.25rem'}}>
+                                        {teamDisplayName}
+                                    </div>
+                                )}
                                 <h1>Round Information</h1>
                             </div>
                             
@@ -1404,7 +1434,7 @@
                                         value={roundInfo.benchmark}
                                         onChange={(e) => setRoundInfo({...roundInfo, benchmark: e.target.value})}
                                     >
-                                        {benchmarkOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                                        {availableBenchmarks.map(o => <option key={o} value={o}>{o}</option>)}
                                     </select>
                                     <div className="benchmark-info">
                                         {benchmarkDescriptions[roundInfo.benchmark]}
@@ -1444,6 +1474,11 @@
                         <div className="card">
                             {/* Compact Header */}
                             <div className="header-compact">
+                                {teamDisplayName && (
+                                    <div style={{fontSize: '0.75rem', color: '#6b7280', marginRight: '0.5rem'}}>
+                                        {teamDisplayName}
+                                    </div>
+                                )}
                                 <h1>Hole {currentHole}</h1>
                                 <div className="header-meta">
                                     <div>{roundInfo.playerName}</div>
