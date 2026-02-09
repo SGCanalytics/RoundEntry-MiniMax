@@ -1169,8 +1169,12 @@
                     roundInfo.benchmark
                 );
                 
+                // Calculate total strokes for shot number (includes penalties from this hole)
+                const penaltiesOnHole = newHoles[currentHole - 1].shots.filter(s => s.penalty).length;
+                const shotNum = newHoles[currentHole - 1].shots.length + penaltiesOnHole + 1;
+                
                 newHoles[currentHole - 1].shots.push({
-                    shotNumber: newHoles[currentHole - 1].shots.length + 1,
+                    shotNumber: shotNum,
                     startDistance: parseFloat(currentShot.startDistance),
                     startLie: currentShot.startLie,
                     endDistance: parseFloat(currentShot.endDistance),
@@ -1191,14 +1195,9 @@
                     }
                 } else {
                     // Continue on same hole
-                    const isSecondShot = newHoles[currentHole - 1].shots.length === 2;
-                    const startDistForSecondShot = parseFloat(currentShot.endDistance);
-                    
-                    // Dynamic default: if 2nd shot and start distance < 200, default to Green
+                    // Dynamic default: if previous lie was Green, default to Green for next shot
                     let nextEndLie = 'Fairway';
                     if (currentShot.endLie === 'Green') {
-                        nextEndLie = 'Green';
-                    } else if (isSecondShot && startDistForSecondShot < 200) {
                         nextEndLie = 'Green';
                     }
                     
@@ -1427,9 +1426,16 @@
                 const isFirstShot = currentHoleData.shots.length === 0;
                 const lastShot = currentHoleData.shots[currentHoleData.shots.length - 1];
                 
-                // FIX: Calculate total score correctly: each shot is 1 stroke + penalty if any
+                // Calculate total score: each shot is 1 stroke + penalty if any
                 const totalScore = holes.reduce((t, h) => 
                     t + h.shots.reduce((s, shot) => s + 1 + (shot.penalty ? 1 : 0), 0), 0);
+                
+                // Calculate hole score: shots + penalties
+                const holeScore = currentHoleData.shots.reduce((s, shot) => s + 1 + (shot.penalty ? 1 : 0), 0);
+                
+                // Calculate shot number including penalties
+                const penaltiesOnHole = currentHoleData.shots.filter(s => s.penalty).length;
+                const currentShotNum = currentHoleData.shots.length + penaltiesOnHole + 1;
                 
                 const holeSG = currentHoleData.shots.reduce((sum, s) => sum + (s.sg || 0), 0);
                 
@@ -1473,7 +1479,7 @@
                             
                             {/* Shot Input Section */}
                             <div className="shot-input-section">
-                                <span className="section-label">Shot #{currentHoleData.shots.length + 1} - Starting Position</span>
+                                <span className="section-label">Shot #{currentShotNum} - Starting Position</span>
                                 <div className="shot-input-row">
                                     <div className="input-with-unit">
                                         <input 
@@ -1562,7 +1568,7 @@
                                     type="checkbox" 
                                     className="penalty-checkbox"
                                     checked={currentShot.penalty}
-                                    onChange={(e) => e.preventDefault()}
+                                    onChange={() => setCurrentShot({...currentShot, penalty: !currentShot.penalty})}
                                     tabIndex="-1"
                                 />
                                 <span className="penalty-text">Penalty Stroke (+1)</span>
@@ -1590,7 +1596,7 @@
                                         className="shot-history-header" 
                                         onClick={() => setHistoryExpanded(!historyExpanded)}
                                     >
-                                        <h3>Hole {currentHole} • {currentHoleData.shots.length + currentHoleData.shots.filter(s => s.penalty).length} strokes • SG: {formatSG(holeSG)}</h3>
+                                        <h3>Hole {currentHole} • {holeScore} strokes • SG: {formatSG(holeSG)}</h3>
                                         <span className="shot-history-toggle">
                                             {historyExpanded ? '▲ Hide' : '▼ Show'}
                                         </span>
